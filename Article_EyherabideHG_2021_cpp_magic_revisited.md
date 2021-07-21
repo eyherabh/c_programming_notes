@@ -13,7 +13,9 @@ Not entirely, contrary to what the article states. The section 6.10.3-12 of the 
 ```warning: ISO C99 requires at least one argument for the "..." in a variadic macro```
 
 when called as `cpp -std=c99 -Wpedantic` (see also section 3.6 of the [GNU CPP manual][5]). Without those flags, `__VA_ARGS__` is left empty. As an extension, GNU CPP also allowed to write `##` before `__VA_ARGS__`, which will resolve issues with dangling commas. That is, given 
+
 ```#define p(fmt, ...) printf(fmt, ## __VA_ARGS__)```,
+
 the call `p("hello")` will expand to `printf("hello")` instead of `printf("hello", )`.
 
 
@@ -28,10 +30,10 @@ The `IF_ELSE` macro presented in [1] differs from that of
 
 
 ## References
-[1] http://jhnet.co.uk/articles/cpp_magic
-[2] https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
-[3] https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F
-[4] http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf
-[5] https://gcc.gnu.org/onlinedocs/cpp
-[6] https://wiki.sei.cmu.edu/confluence/display/c/
-[7] https://yurichev.com/mirrors/C/JPL_Coding_Standard_C.pdf
+[1]: http://jhnet.co.uk/articles/cpp_magic
+[2]; https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
+[3]; https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F
+[4]; http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf
+[5]; https://gcc.gnu.org/onlinedocs/cpp
+[6]; https://wiki.sei.cmu.edu/confluence/display/c/
+[7]; https://yurichev.com/mirrors/C/JPL_Coding_Standard_C.pdf
