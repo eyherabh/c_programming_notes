@@ -8,7 +8,7 @@ The content of that article is similar to that of [C Preprocessor tricks, tips, 
 
 ## Is it C-compliant?
 
-Not entirely, contrary to what the article states. The section 6.10.3-12 of the C99 standard [4] requires that the ellipsis (`...`) matches at least one argument of the variadic-macro call (also for C11 and C18). However, this is not fulfileed for the variadic macro `HAS_ARGS`and `SECOND`. The former is defined as `#define HAS_ARGS(...)` but intended to handle calls with no arguments (within `MAP`), thereby in contradiction with C99. The latter is defined as `#define SECOND(x, y, ...)` but intended to handle calls with only two arguments ( within `IS_PROBE`), thereby resulting in a situation analogous to that of `HAS_ARGS` (i.e. the `...` is associated with no argument). In both cases, the GNU CPP 9.3.0 emits the following warning:
+Not entirely, contrary to what the article states. The section 6.10.3-12 of the [C99 standard][4] requires that the ellipsis (`...`) matches at least one argument of the variadic-macro call (also for C11 and C18). However, this is not fulfileed for the variadic macro `HAS_ARGS`and `SECOND`. The former is defined as `#define HAS_ARGS(...)` but intended to handle calls with no arguments (within `MAP`), thereby in contradiction with C99. The latter is defined as `#define SECOND(x, y, ...)` but intended to handle calls with only two arguments ( within `IS_PROBE`), thereby resulting in a situation analogous to that of `HAS_ARGS` (i.e. the `...` is associated with no argument). In both cases, the GNU CPP 9.3.0 emits the following warning:
 
 ```warning: ISO C99 requires at least one argument for the "..." in a variadic macro```
 
@@ -26,7 +26,27 @@ Empty `__VA_ARGS__` may be considered a non-standard feature which coding standa
 
 ## CPP currying
 
-The `IF_ELSE` macro presented in [1] differs from that of 
+The `IF_ELSE` macro shown in [[1]] is analogous to the `IFF` macro shown in [[2]] except for a subtle difference in their calls. Specifically, their calls below
+
+```
+IF_ELSE(cond)(true_action)(false_action)
+IFF    (cond)(true_action, false_action)
+```
+
+show that the `IF_ELSE` macro is a curried version of the `IFF` macro (that is, a transformed version that takes single arguments multiple times instead of multiple arguments at once).
+
+The macro `IF_ELSE` may seem more general because it allows `true_action` to expand to a comma-separate list, for example 
+
+```IF_ELSE(cond)(a, b)(false_action)```. 
+
+The same can be achived with `IFF` by using a `COMMA` macro (see page 272 of [[8]] and also [[9]]) as follows
+
+```
+#define COMMA ,
+IFF(cond)(a COMMA b, false_action)
+```
+
+(but not by enclosing the arguments with parentheses, e.g. `IFF(cond)((a, b), false_action)`, because the expansion will preserve the parentheses). Nevertheless, `IF_ELSE` is most likely seen as cleaner (see [[9]]).
 
 
 ## References
@@ -37,3 +57,15 @@ The `IF_ELSE` macro presented in [1] differs from that of
 [5]: https://gcc.gnu.org/onlinedocs/cpp
 [6]: https://wiki.sei.cmu.edu/confluence/display/c/
 [7]: https://yurichev.com/mirrors/C/JPL_Coding_Standard_C.pdf
+[8]: https://www.amazon.com/Beginning-Arduino-Second-Learn-Programming/dp/1484209419
+[9]: https://stackoverflow.com/questions/13842468/comma-in-c-c-macro
+
+1. [C pre-processor magic](http://jhnet.co.uk/articles/cpp_magic)
+2. [C Preprocessor tricks, tips and idioms](https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms)
+3. [Is the C preprocessor Turing complete?](https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F)
+4. [C99 standard](http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf)
+5. [GNU CPP manual](https://gcc.gnu.org/onlinedocs/cpp)
+6. [SEI CERT C Coding Standard](https://wiki.sei.cmu.edu/confluence/display/c/)
+7. [JPL Institutional Coding Standard for the C Programming Language](https://yurichev.com/mirrors/C/JPL_Coding_Standard_C.pdf)
+8. [Purdum J, Beginning C for Arduino, Second Edition: Learn C Programming for the Arduino,2015](https://www.amazon.com/Beginning-Arduino-Second-Learn-Programming/dp/1484209419)
+9. [Response of non-a-user to "Comma in C/C++ macro"](https://stackoverflow.com/questions/13842468/comma-in-c-c-macro)
