@@ -31,9 +31,9 @@ The `IF_ELSE` macro presented in [1] differs from that of
 
 ## References
 [1]: http://jhnet.co.uk/articles/cpp_magic
-[2]; https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
-[3]; https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F
-[4]; http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf
-[5]; https://gcc.gnu.org/onlinedocs/cpp
-[6]; https://wiki.sei.cmu.edu/confluence/display/c/
-[7]; https://yurichev.com/mirrors/C/JPL_Coding_Standard_C.pdf
+[2]: https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
+[3]: https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F
+[4]: http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf
+[5]: https://gcc.gnu.org/onlinedocs/cpp
+[6]: https://wiki.sei.cmu.edu/confluence/display/c/
+[7]: https://yurichev.com/mirrors/C/JPL_Coding_Standard_C.pdf
