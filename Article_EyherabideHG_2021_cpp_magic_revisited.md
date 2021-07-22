@@ -6,29 +6,7 @@ Although macros are almost always discouraged, they are not rare in production c
 
 The content of that article is similar to that of [C Preprocessor tricks, tips, and idioms][2] and [Is the C preprocessor Turing complete?][3], except for two aspects. First, macro expansion is illustrated in detail, step by step, rendering it extremely useful for understanding or reviewing the expansion of macros with recursion. Second, it introduces a macro construct for recursion that automatically counts the number of items to iterate onto. That is, the macro does not require a count parameter that could possibly not match the actual number of items. 
 
-## Is it C-compliant?
-
-Not entirely, contrary to what the article states. The section 6.10.3-12 of the [C99 standard][4] requires that the ellipsis (`...`) matches at least one argument of the variadic-macro call (also for C11 and C18). However, this is not fulfileed for the variadic macro `HAS_ARGS`and `SECOND`. The former is defined as `#define HAS_ARGS(...)` but intended to handle calls with no arguments (within `MAP`), thereby in contradiction with C99. The latter is defined as `#define SECOND(x, y, ...)` but intended to handle calls with only two arguments ( within `IS_PROBE`), thereby resulting in a situation analogous to that of `HAS_ARGS` (i.e. the `...` is associated with no argument). In both cases, the GNU CPP 9.3.0 emits the following warning:
-
-```
-warning: ISO C99 requires at least one argument for the "..." in a variadic macro
-```
-
-when called as `cpp -std=c99 -Wpedantic` (see also section 3.6 of the [GNU CPP manual][5]). Without those flags, `__VA_ARGS__` is left empty. As an extension, GNU CPP also allowed to write `##` before `__VA_ARGS__`, which will resolve issues with dangling commas. That is, given 
-
-```
-#define p(fmt, ...) printf(fmt, ## __VA_ARGS__)
-```
-
-the call `p("hello")` will expand to `printf("hello")` instead of `printf("hello", )`.
-
-
-## Compliance with other standards
-
-Empty `__VA_ARGS__` may be considered a non-standard feature which coding standards often discourage (e.g. recommendation MSC14-C in [SEI CERT C Coding Standard][6] and rule 1 in [JPL Institutional Coding Standard for the C Programming Language][7]).
-
-
-## CPP currying
+### CPP currying
 
 The `IF_ELSE` macro shown in [[1]] is analogous to the `IFF` macro shown in [[2]] except for a subtle difference in their calls. Specifically, their calls below
 
@@ -55,6 +33,73 @@ IFF(cond)(a COMMA b, false_action)
 (but not by enclosing the arguments with parentheses, e.g. `IFF(cond)((a, b), false_action)`, because the expansion will preserve the parentheses). Nevertheless, `IF_ELSE` is most likely seen as cleaner (see [[9]]).
 
 
+
+## Compliance
+
+### Is it C-compliant?
+
+Not entirely, contrary to what the article states. The section 6.10.3-12 of the [C99 standard][4] requires that the ellipsis (`...`) matches at least one argument of the variadic-macro call (also for C11 and C18). However, this is not fulfileed for the variadic macro `HAS_ARGS`and `SECOND`. The former is defined as `#define HAS_ARGS(...)` but intended to handle calls with no arguments (within `MAP`), thereby in contradiction with C99. The latter is defined as `#define SECOND(x, y, ...)` but intended to handle calls with only two arguments ( within `IS_PROBE`), thereby resulting in a situation analogous to that of `HAS_ARGS` (i.e. the `...` is associated with no argument). In both cases, the GNU CPP 9.3.0 emits the following warning:
+
+```
+warning: ISO C99 requires at least one argument for the "..." in a variadic macro
+```
+
+when called as `cpp -std=c99 -Wpedantic` (see also section 3.6 of the [GNU CPP manual][5]). Without those flags, `__VA_ARGS__` is left empty. As an extension, GNU CPP also allowed to write `##` before `__VA_ARGS__`, which will resolve issues with dangling commas. That is, given 
+
+```
+#define p(fmt, ...) printf(fmt, ## __VA_ARGS__)
+```
+
+the call `p("hello")` will expand to `printf("hello")` instead of `printf("hello", )`.
+
+
+### Compliance with other standards
+
+Empty `__VA_ARGS__` may be considered a non-standard feature which coding standards often discourage (e.g. recommendation MSC14-C in [SEI CERT C Coding Standard][6] and rule 1 in [JPL Institutional Coding Standard for the C Programming Language][7]).
+
+
+## Inaccuracies and redundancies
+
+### Argument expansion preserves the number of arguments
+
+Both [[1]] and [[2]] implement the macro `IS_PROBE` as variadic, seemingly as if that is required, but that is actually unnecessary. Recall the following definitions from [[1]]
+
+```
+#define SECOND(a, b, ...) b
+#define IS_PROBE(...) SECOND(__VA_ARGS__, 0)
+#define PROBE() ~, 1
+```
+
+which are analogous to the definitions of `CHECK_N`, `CHECH` AND `PROBE` in [[2]]. These definitions are intended to produce `1` when calling `IS_PROBE` with `PROBE()`, and `0` when calling `IS_PROBE` with anything else, that is
+
+```
+IS_PROBE(PROBE()) // should produce 1
+IS_PROBE(xxx)     // should produce 0
+```
+
+(whether the latter expansion holds depends on the expansion of xxx; see [effect-of-commas-in-arguments-of-is-probe]).
+
+The text and the substitution sequences in [[1]] seemingly suggests that `PROBE()` will expand in a way that `IS_PROBE` will be called with two arguments instead of one. That is, as if
+
+```
+IS_PROBE(PROBE())
+```
+
+expands into
+
+```
+IS_PROBE(~, 1)
+```
+
+instead of into something analogous to
+
+```
+IS_PROBE(~ COMMA 1)
+```
+
+with the macro `COMMA` defined as in the section [CPP currying](cpp-currying). Although the latter may seem confusing because `COMMA` does not appear in the definition of `PROBE()`, it is more accurate in the sense that preserves the number of arguments passed to `IS_PROBE`.
+
+
 ## Limitations
 
 ### Required number of arguments for `FIRST` and `SECOND`
@@ -71,7 +116,20 @@ For GNP cpp to work, `FIRST` and `SECOND` require at least one and two arguments
 
 With this modification, `FIRST` and `SECOND` require no argument for GNU CPP to work but at least one argument for C99 compliance. However, note that if `FIRST` is called with less than one argument, it will expand to `~`. According to [[1]], this character is likely to yield a syntax error. Hence, even if GNU CPP works, the compilation might not, effectively meaning that the macros `FIRST` and `SECOND` now require one and two arguments regardless of compliance level.
 
-However, the restriction is not entirely enforced because character `~` is still valid in some situations. To ensure that it is, one may well choose `//` (two slashes) which I think is even more likely to yield a syntax error. On the contrary, to remove the restriction, one may choose to remove the `~` character and instead supply an empty argument.
+The restriction is not entirely enforced because character `~` is still valid in some situations. To ensure that it is, one may well choose to replace `~` with `\\` (two backslashes) which I think is even more likely to yield a syntax error. On the contrary, to remove the restriction, one may choose to remove the `~` character altogether and instead supply an empty argument.
+
+### Empty arguments treated as missing by `HAS_ARGS`
+
+The calls `HAS_ARGS()`, `HAS_ARGS( , )` and `HAS_ARGS( , other )` yield all the same result, namely `0`, because `HAS_ARGS` only takes into account the first argument (having no argument and having am emtpy argument is indistinguishable).
+
+### The effect of commas in arguments to `IS_PROBE`
+
+Although `IS_PROBE(xxx)` is intended in [[1]] and [[2]] to expand to `0` (see [Argument expansion preserves the number of arguments](argument-expansion-preserves-the-number-of-arguments), this will not be the case if `xxx` expands to more than one argument with the second one not being `0`, as in
+
+```
+#define xxx a, b, c
+IS_PROBE(xxx) // produces b
+```
 
 
 ## References
