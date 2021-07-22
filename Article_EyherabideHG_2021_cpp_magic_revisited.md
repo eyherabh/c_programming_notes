@@ -10,11 +10,15 @@ The content of that article is similar to that of [C Preprocessor tricks, tips, 
 
 Not entirely, contrary to what the article states. The section 6.10.3-12 of the [C99 standard][4] requires that the ellipsis (`...`) matches at least one argument of the variadic-macro call (also for C11 and C18). However, this is not fulfileed for the variadic macro `HAS_ARGS`and `SECOND`. The former is defined as `#define HAS_ARGS(...)` but intended to handle calls with no arguments (within `MAP`), thereby in contradiction with C99. The latter is defined as `#define SECOND(x, y, ...)` but intended to handle calls with only two arguments ( within `IS_PROBE`), thereby resulting in a situation analogous to that of `HAS_ARGS` (i.e. the `...` is associated with no argument). In both cases, the GNU CPP 9.3.0 emits the following warning:
 
-```warning: ISO C99 requires at least one argument for the "..." in a variadic macro```
+```
+warning: ISO C99 requires at least one argument for the "..." in a variadic macro
+```
 
 when called as `cpp -std=c99 -Wpedantic` (see also section 3.6 of the [GNU CPP manual][5]). Without those flags, `__VA_ARGS__` is left empty. As an extension, GNU CPP also allowed to write `##` before `__VA_ARGS__`, which will resolve issues with dangling commas. That is, given 
 
-```#define p(fmt, ...) printf(fmt, ## __VA_ARGS__)```,
+```
+#define p(fmt, ...) printf(fmt, ## __VA_ARGS__)
+```
 
 the call `p("hello")` will expand to `printf("hello")` instead of `printf("hello", )`.
 
@@ -37,7 +41,9 @@ show that the `IF_ELSE` macro is a curried version of the `IFF` macro (that is, 
 
 The macro `IF_ELSE` may seem more general because it allows `true_action` to expand to a comma-separate list, for example 
 
-```IF_ELSE(cond)(a, b)(false_action)```. 
+```
+IF_ELSE(cond)(a, b)(false_action)
+```
 
 The same can be achived with `IFF` by using a `COMMA` macro (see page 272 of [[8]] and also [[9]]) as follows
 
@@ -47,6 +53,25 @@ IFF(cond)(a COMMA b, false_action)
 ```
 
 (but not by enclosing the arguments with parentheses, e.g. `IFF(cond)((a, b), false_action)`, because the expansion will preserve the parentheses). Nevertheless, `IF_ELSE` is most likely seen as cleaner (see [[9]]).
+
+
+## Limitations
+
+### Required number of arguments for `FIRST` and `SECOND`
+
+For GNP cpp to work, `FIRST` and `SECOND` require at least one and two arguments, respectively, but for c99 compliance, they require one more. This can be reduced by defining
+
+```
+#define _FIRST(a, ...) a
+#define FIRST(...) _FIRST(__VA_ARGS__, ~)
+
+#define _SECOND(a, b, ...) b
+#define SECOND(...) _SECOND(__VA_ARGS__, ~, ~)
+```
+
+With this modification, `FIRST` and `SECOND` require no argument for GNU CPP to work but at least one argument for C99 compliance. However, note that if `FIRST` is called with less than one argument, it will expand to `~`. According to [[1]], this character is likely to yield a syntax error. Hence, even if GNU CPP works, the compilation might not, effectively meaning that the macros `FIRST` and `SECOND` now require one and two arguments regardless of compliance level.
+
+However, the restriction is not entirely enforced because character `~` is still valid in some situations. To ensure that it is, one may well choose `//` (two slashes) which I think is even more likely to yield a syntax error. On the contrary, to remove the restriction, one may choose to remove the `~` character and instead supply an empty argument.
 
 
 ## References
