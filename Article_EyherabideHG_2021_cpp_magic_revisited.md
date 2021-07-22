@@ -1,6 +1,6 @@
 # C pre-processor magic, revisited
 
-Although macros are almost always discouraged, they are not rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by [C pre-processor magic][1], complementing the information their provided in a concise manner. Therefore, it is recommended to either read that article beforehand, or in conjunction with the following sections.
+Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by [C pre-processor magic][1], complementing the information their provided in a concise manner. Therefore, it is recommended to either read that article beforehand, or in conjunction with the following sections.
 
 ## What makes it interesting?
 
