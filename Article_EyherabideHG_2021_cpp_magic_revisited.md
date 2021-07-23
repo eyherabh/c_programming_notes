@@ -1,10 +1,10 @@
 # C pre-processor magic, revisited
 
-Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by [C pre-processor magic][1], complementing the information their provided in a concise manner. Therefore, it is recommended to either read that article beforehand, or in conjunction with the following sections.
+Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by [C pre-processor magic][1][[1]], complementing the information their provided in a concise manner. Therefore, it is recommended to either read that article beforehand, or in conjunction with the following sections.
 
 ## What makes it interesting?
 
-The content of that article is similar to that of [C Preprocessor tricks, tips, and idioms][2] and [Is the C preprocessor Turing complete?][3], except for two aspects. First, macro expansion is illustrated in detail, step by step, rendering it extremely useful for understanding or reviewing the expansion of macros with recursion. Second, it introduces a macro construct for recursion that automatically counts the number of items to iterate onto. That is, the macro does not require a count parameter that could possibly not match the actual number of items. 
+The content of [[1]] is similar to that of [C Preprocessor tricks, tips, and idioms][2][[2]] and [Is the C preprocessor Turing complete?][3][[2]], except for two aspects. First, macro expansion is illustrated in detail, step by step, rendering it extremely useful for understanding or reviewing the expansion of macros with recursion. Second, it introduces a macro construct for recursion that automatically counts the number of items to iterate onto. That is, the macro does not require a count parameter that could possibly not match the actual number of items. 
 
 ### CPP currying
 
@@ -77,7 +77,7 @@ IS_PROBE(PROBE()) // should produce 1
 IS_PROBE(xxx)     // should produce 0
 ```
 
-(whether the latter expansion holds depends on the expansion of xxx; see [effect-of-commas-in-arguments-of-is-probe]).
+(whether the latter expansion holds depends on the expansion of xxx; see [Effect of commas in arguments of is probe](#effect-of-commas-in-arguments-of-is-probe)).
 
 The text and the substitution sequences in [[1]] seemingly suggests that `PROBE()` will expand in a way that `IS_PROBE` will be called with two arguments instead of one. That is, as if
 
@@ -97,7 +97,20 @@ instead of into something analogous to
 IS_PROBE(~ COMMA 1)
 ```
 
-with the macro `COMMA` defined as in the section [CPP currying](cpp-currying). Although the latter may seem confusing because `COMMA` does not appear in the definition of `PROBE()`, it is more accurate in the sense that preserves the number of arguments passed to `IS_PROBE`.
+with the macro `COMMA` defined as in the section [CPP currying](#cpp-currying). Although the latter may seem confusing because `COMMA` does not appear in the definition of `PROBE()`, it is more accurate in the sense that preserves the number of arguments passed to `IS_PROBE`.
+
+
+To clarify, the section 3.10.6 of [[5]] starts by saying that, unless stringized or contatenated (recall `#` and `##`),  macro arguments are expanded before substituting them in the macro body. That is, it does not mention that, after expansion, they are substituted in the macro call and the macro invocation restarted with the expanded arguments. The difference is that, unlike the former, the latter may cause the number of arguments to increase. However, this is not explicitly mention there, one may still argue that it is not entirely clear. Furtunately, the last part of the section addresses this issue with a concrete example. 
+
+
+Taking that into account, `IS_PROBE()` can be defined as
+
+```
+#define IS_PROBE(x) SECOND(x, 0)
+```
+
+with the call `IS_PROBE(PROBE())` expanding first to `SECOND(~, 1, 0)` and then to `1`. This also shows that, although variadic macros can expand to multiple arguments as mentioned in [[2]],  the property actually applies to any arguments. To conclude, the result is that defining the macro as variadic is redundant and could be removed to simplify the discusion. 
+
 
 
 ## Limitations
@@ -124,7 +137,7 @@ The calls `HAS_ARGS()`, `HAS_ARGS( , )` and `HAS_ARGS( , other )` yield all the 
 
 ### The effect of commas in arguments to `IS_PROBE`
 
-Although `IS_PROBE(xxx)` is intended in [[1]] and [[2]] to expand to `0` (see [Argument expansion preserves the number of arguments](argument-expansion-preserves-the-number-of-arguments), this will not be the case if `xxx` expands to more than one argument with the second one not being `0`, as in
+Although `IS_PROBE(xxx)` is intended in [[1]] and [[2]] to expand to `0` (see [Argument expansion preserves the number of arguments](#argument-expansion-preserves-the-number-of-arguments), this will not be the case if `xxx` expands to more than one argument with the second one not being `0`, as in
 
 ```
 #define xxx a, b, c
