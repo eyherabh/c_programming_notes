@@ -1,4 +1,4 @@
-# C pre-processor magic, revisited
+# C pre-processor magic, revisited (W.I.P.)
 
 Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by [C pre-processor magic][1][[1]], complementing the information their provided in a concise manner. Therefore, it is recommended to either read that article beforehand, or in conjunction with the following sections.
 
@@ -62,7 +62,13 @@ Empty `__VA_ARGS__` may be considered a non-standard feature which coding standa
 
 ### Argument expansion preserves the number of arguments
 
-Both [[1]] and [[2]] implement the macro `IS_PROBE` as variadic, seemingly as if that is required, but that is actually unnecessary. Recall the following definitions from [[1]]
+Both [[1]] and [[2]] implement the macro `IS_PROBE` as variadic, seemingly as if required, but that is actually unnecessary. That is, `IS_PROBE` could be defined as
+
+```
+#define IS_PROBE(x) SECOND(x, 0)
+```
+
+and perform in exactly the same manner. To understand this, recall the following definitions from [[1]]
 
 ```
 #define SECOND(a, b, ...) b
@@ -100,17 +106,15 @@ IS_PROBE(~ COMMA 1)
 with the macro `COMMA` defined as in the section [CPP currying](#cpp-currying). Although the latter may seem confusing because `COMMA` does not appear in the definition of `PROBE()`, it is more accurate in the sense that preserves the number of arguments passed to `IS_PROBE`.
 
 
-To clarify, the section 3.10.6 of [[5]] starts by saying that, unless stringized or contatenated (recall `#` and `##`),  macro arguments are expanded before substituting them in the macro body. That is, it does not mention that, after expansion, they are substituted in the macro call and the macro invocation restarted with the expanded arguments. The difference is that, unlike the former, the latter may cause the number of arguments to increase. However, this is not explicitly mention there, one may still argue that it is not entirely clear. Furtunately, the last part of the section addresses this issue with a concrete example. 
-
-
-Taking that into account, `IS_PROBE()` can be defined as
+To clarify, the section 3.10.6 of [[5]] starts by saying that, unless stringized or contatenated (recall `#` and `##`),  macro arguments are expanded before substituting them in the macro body. That is, it does not mention that, after expansion, they are substituted in the macro call and the macro invocation restarted with the expanded arguments. The difference is that, unlike the former, the latter may cause the number of arguments to increase. However, this is not explicitly mention there, one may still argue that it is not entirely clear. Furtunately, the last part of the section addresses this issue with a concrete example. Taking that information into account, one can define `IS_PROBE()` as
 
 ```
 #define IS_PROBE(x) SECOND(x, 0)
 ```
 
-with the call `IS_PROBE(PROBE())` expanding first to `SECOND(~, 1, 0)` and then to `1`. This also shows that, although variadic macros can expand to multiple arguments as mentioned in [[2]],  the property actually applies to any arguments. To conclude, the result is that defining the macro as variadic is redundant and could be removed to simplify the discusion. 
+and rest assured that the call `IS_PROBE(PROBE())` will expand first to `SECOND(~, 1, 0)` and then to `1`. 
 
+To conclude, the number of arguments before and after the expansion of the macro arguments remains the same, and may only change after the arguments are replaced in the macro body and hte result is scanned again. Although variadic arguments can expand to multiple arguments as mentioned in [[2]], that property actually applies to all arguments. In the case of `IS_PROBE`, defining it as variadic is not required but redundant, and could be simplified by defining it as taking a single argument.
 
 
 ## Limitations
@@ -131,9 +135,69 @@ With this modification, `FIRST` and `SECOND` require no argument for GNU CPP to 
 
 The restriction is not entirely enforced because character `~` is still valid in some situations. To ensure that it is, one may well choose to replace `~` with `\\` (two backslashes) which I think is even more likely to yield a syntax error. On the contrary, to remove the restriction, one may choose to remove the `~` character altogether and instead supply an empty argument.
 
-### Empty arguments treated as missing by `HAS_ARGS`
+### `BOOL` maps multiple arguments to `0`
 
-The calls `HAS_ARGS()`, `HAS_ARGS( , )` and `HAS_ARGS( , other )` yield all the same result, namely `0`, because `HAS_ARGS` only takes into account the first argument (having no argument and having am emtpy argument is indistinguishable).
+The macro `BOOL` not only maps `0` to `0`, but also any argument which first token is `0`. That is, the call `BOOL(0[sep]any)` will expand to `0` regardless of the value of `any` provided that `[sep]` leaves zero as a separate token (see section 1.3 of [[5]]). To illustrate this, recall the definition of `BOOL` and its related macros reproduced below
+
+```
+#define SECOND(a, b, ...) b
+#define IS_PROBE(...) SECOND(__VA_ARGS__, 0)
+#define PROBE() ~, 1
+#define CAT(a,b) a ## b
+#define _NOT_0 PROBE()
+#define NOT(x) IS_PROBE(CAT(_NOT_, x))
+#define BOOL(x) NOT(NOT(x))
+```
+
+For simplicity, suppose that `[sep]` is set to ` ` (a space), in which case the following substitutions occur
+
+```
+NOT(NOT(0 any));
+NOT(IS_PROBE(CAT(_NOT_, 0 any)));
+NOT(IS_PROBE(_NOT_0 any));
+NOT(IS_PROBE(PROBE() any));
+NOT(IS_PROBE(~, 1 any));
+NOT(1 any);
+IS_PROBE(CAT(_NOT_, 1 any));
+IS_PROBE(_NOT_1 any);
+SECOND(_NOT_1 any, 0);
+0
+```
+
+Setting `[sep]` for example to `()`, `\\` or `~` yields to the same result.
+
+
+### Empty arguments and others treated as missing by `HAS_ARGS`
+
+Recall the definition of `HAS_ARGS` and related macros reproduced below
+
+```
+#define FIRST(a, ...) a
+#define _END_OF_ARGUMENTS_() 0
+#define HAS_ARGS(...) BOOL(FIRST(_END_OF_ARGUMENTS_ __VA_ARGS__)())
+```
+where the definition of `BOOL` was ommited because it was already given in [`BOOL` maps multiple arguments to `0`](#bool-maps-multiple-arguments-to-0).
+
+Like `HAS_ARGS()`, the call `HAS_ARGS( , some )` expands to `0` because `HAS_ARGS` only takes into account the first argument (having no argument and having am emtpy argument is indistinguishable). The substitutions occur as follows
+
+```
+BOOL(FIRST(_END_OF_ARGUMENTS_ , some)())
+BOOL(_END_OF_ARGUMENTS_())
+BOOL(0)
+0
+```
+
+Analogously, `HAS_ARGS(()any, some)` expands to `0` regardless of the values of `any` and `some`, because it triggers the call to `_END_OF_ARGUMENTS_`. The following substitutions illustrate this
+
+```
+BOOL(FIRST(_END_OF_ARGUMENTS_ ()any, some)()) // The call to _END_OF_ARGUMENTS_ happens within FIRST
+BOOL(FIRST(0 any, some)())
+BOOL(0 any())
+0
+```
+
+In the second line, the space added between the expansion of `_END_OF_ARGUMENTS()` and `any` is a consequence that token boundaries are preserved except when `##` is used (section 1.3 of [[5]]).
+
 
 ### The effect of commas in arguments to `IS_PROBE`
 
