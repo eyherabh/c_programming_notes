@@ -1,18 +1,18 @@
 # C pre-processor magic, revisited (W.I.P.)
 
-Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by [C pre-processor magic][1][[1]], complementing the information their provided in a concise manner. Therefore, it is recommended to either read that article beforehand, or in conjunction with the following sections.
+Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by the articles [C pre-processor magic][1][[1]], [C Preprocessor tricks, tips, and idioms][2][[2]] and [Is the C preprocessor Turing complete?][3][[2]], complementing the information their provided in a concise manner. Therefore, it is recommended to either read those articles beforehand, or in conjunction with the following sections.
 
-## What makes it interesting?
+# What makes it interesting? #
 
-The content of [[1]] is similar to that of [C Preprocessor tricks, tips, and idioms][2][[2]] and [Is the C preprocessor Turing complete?][3][[2]], except for two aspects. First, macro expansion is illustrated in detail, step by step, rendering it extremely useful for understanding or reviewing the expansion of macros with recursion. Second, it introduces a macro construct for recursion that automatically counts the number of items to iterate onto. That is, the macro does not require a count parameter that could possibly not match the actual number of items. 
+The content of [[1]] is similar to that of [[2]] and [[3]], except for two aspects. First, macro expansion is illustrated in detail, step by step, rendering it extremely useful for understanding or reviewing the expansion of macros with recursion. Second, both present macros for iterations but different. The former presents a `MAP` macro for mapping another macro over a list of arguments which automatically counts the number of items (i.e., the macro does not require a count parameter that could possibly differ the actual number of items). The latter, two macros `REPEAT` and `WHILE` for repeating a macro a fixed number of times or until a condition is met, respectively. 
 
-### CPP currying
+## CPP currying ##
 
 The `IF_ELSE` macro shown in [[1]] is analogous to the `IFF` macro shown in [[2]] except for a subtle difference in their calls. Specifically, their calls below
 
 ```
 IF_ELSE(cond)(true_action)(false_action)
-IFF    (cond)(true_action, false_action)
+IF     (cond)(true_action, false_action)
 ```
 
 show that the `IF_ELSE` macro is a curried version of the `IFF` macro (that is, a transformed version that takes single arguments multiple times instead of multiple arguments at once).
@@ -27,12 +27,82 @@ The same can be achived with `IFF` by using a `COMMA` macro (see page 272 of [[8
 
 ```
 #define COMMA ,
-IFF(cond)(a COMMA b, false_action)
+IF(cond)(a COMMA b, false_action)
 ```
 
-(but not by enclosing the arguments with parentheses, e.g. `IFF(cond)((a, b), false_action)`, because the expansion will preserve the parentheses). Nevertheless, `IF_ELSE` is most likely seen as cleaner (see [[9]]).
+(but not by enclosing the arguments with parentheses, e.g. `IF(cond)((a, b), false_action)`, because the expansion will preserve the parentheses). Nevertheless, in this case, `IF_ELSE` is most likely seen as cleaner (see [[9]]).
+
+However, `IF_ELSE` requires an extra expansion if the actions are macros to be call. To illustrate this, consider the following example
+```
+IF_ELSE(1)(FIRST)(SECOND)(1, 2) // Expands to FIRST(1,2)
+IF     (1)(FIRST, SECOND)(1, 2) // Expands to 1
+```
+The extra expansion can be forced through either the `EVAL` macro or the `EXPAND` macro of [[1]] or [[2]].
 
 
+## Avoid `EXPAND` within the `EVAL` macro ##
+
+The macros `EXPAND` and `EVAL` are defined in [[1]] and [[2]] in a way analogously to the following
+```
+#define EXPAND(...) __VA_ARGS__
+#define EVAL(...) EVAL1(EVAL1(EVAL1(__VA_ARGS__)))
+#define EVAL1(...) __VA_ARGS__
+```
+where, for simplicity, this definition of `EVAL` only expands thrice. Note that `EXPAND` and `EVAL1` are identical. Can we redefine `EVAL` as follows
+```
+#define EVAL_EXPAND(...) EXPAND(EXPAND(EXPAND(__VA_ARGS__)))
+```
+and remove the apparent redundancy. Unfortunately, that is not always possible, and depend on how `EXPAND` is used in the argument of `EVAL`.
+
+To illustrate, consider the following calls
+```
+EVAL       (EXPAND(X))                 // Expands to X
+EVAL_EXPAND(EXPAND(X))                 // Expands to X
+EVAL       (EXPAND EMPTY()(X))         // Expands to X
+EVAL_EXPAND(EXPAND EMPTY()(X))         // Expands to X
+EVAL       (EXPAND EMPTY EMPTY()()(X)) // Expands to X
+EVAL_EXPAND(EXPAND EMPTY EMPTY()()(X)) // Expands to EXPAND(X)
+```
+The first five calls all expand to `X` as expected, but the last one does not. To understand why, consider the substitution sequence of the last call reproduced below
+```
+EVAL_EXPAND(EXPAND EMPTY EMPTY()()(X))
+```
+Based on sections 3.3 and 3.10.6 of [[5]], the argument of `EVAL` is fully expanded to
+```
+EXPAND EMPTY()(1)
+```
+and then substituted into the body of `EVAL`
+```
+EXPAND(EXPAND(EXPAND EMPTY()(1)))
+```
+Scanning starts again from the beginning, expanding first the argument of the nested `EXPAND` calls to
+```
+EXPAND(X)
+```
+and then substituted and expanded as nested macros (see section 3.10.6 in [[5]]). However, there is a twist. 
+
+According to [[1]], the macro preprocessor should have not considered `EXPAND` as a macro because of the presence of `EMPTY()`. This is the case when it comes to the substitutions, but apparently not the case when it comes to painting macros for stopping subsequence expansion. Specifically, macro preprocessor acts as if regarding it as a self-referential macro that did not expand in the first scan (see section 3.10.6 of [[5]]). Whether this is the case remains to be seen, but for the time being, it is clear that the `EVAL` macro cannot be based on a macro used in the one being expanded by `EVAL`.
+
+
+### The `REPEAT` macro
+
+In the definition of `REPEAT` given by [[2]], the call to `OBSTRUCT` surrounding `macro` can be made redundant, resulting in the following simpler definition
+
+```
+#define REPEAT(count, macro, ...) \
+    WHEN(count) ( \
+        OBSTRUCT(REPEAT_INDIRECT) () ( \
+            DEC(count), macro, __VA_ARGS__ \
+        ) \
+        macro(DEC(count), __VA_ARGS__) \
+    )
+#define REPEAT_INDIRECT() REPEAT
+```
+The other call to `OBSTRUCT` and the `REPEAT_REDIRECT` macro cannot be further simplify without running into troubles analogous to those described in the previous section.
+
+### The `MAP` macro
+
+Under construction ...
 
 ## Compliance
 
@@ -170,7 +240,6 @@ Setting `[sep]` for example to `()`, `\\` or `~` yields to the same result.
 ### Empty arguments and others treated as missing by `HAS_ARGS`
 
 Recall the definition of `HAS_ARGS` and related macros reproduced below
-
 ```
 #define FIRST(a, ...) a
 #define _END_OF_ARGUMENTS_() 0
@@ -178,8 +247,7 @@ Recall the definition of `HAS_ARGS` and related macros reproduced below
 ```
 where the definition of `BOOL` was ommited because it was already given in [`BOOL` maps multiple arguments to `0`](#bool-maps-multiple-arguments-to-0).
 
-Like `HAS_ARGS()`, the call `HAS_ARGS( , some )` expands to `0` because `HAS_ARGS` only takes into account the first argument (having no argument and having am emtpy argument is indistinguishable). The substitutions occur as follows
-
+Like `HAS_ARGS()`, the call `HAS_ARGS( , some )` expands to `0` because `HAS_ARGS` only takes into account the first argument (having no argument and having am emtpy argument is indistinguishable; see section 3.3 of [[5]]). The substitutions occur as follows
 ```
 BOOL(FIRST(_END_OF_ARGUMENTS_ , some)())
 BOOL(_END_OF_ARGUMENTS_())
@@ -187,8 +255,7 @@ BOOL(0)
 0
 ```
 
-Analogously, `HAS_ARGS(()any, some)` expands to `0` regardless of the values of `any` and `some`, because it triggers the call to `_END_OF_ARGUMENTS_`. The following substitutions illustrate this
-
+Analogously, `HAS_ARGS(()any, some)` expands to `0` for almost any value of `any` and `some`, because it triggers the call to `_END_OF_ARGUMENTS_`. The following substitutions illustrate this
 ```
 BOOL(FIRST(_END_OF_ARGUMENTS_ ()any, some)()) // The call to _END_OF_ARGUMENTS_ happens within FIRST
 BOOL(FIRST(0 any, some)())
@@ -196,20 +263,20 @@ BOOL(0 any())
 0
 ```
 
-In the second line, the space added between the expansion of `_END_OF_ARGUMENTS()` and `any` is a consequence that token boundaries are preserved except when `##` is used (section 1.3 of [[5]]).
+In the second line, the space added between the expansion of `_END_OF_ARGUMENTS()` and `any` is a consequence that token boundaries are preserved except when `##` is used (section 1.3 of [[5]]). The expansion of the third line is analogous to that shown in [`BOOL` maps multiple arguments to `0`](#bool-maps-multiple-arguments-to-0).
 
 
-### The effect of commas in arguments to `IS_PROBE`
+### The effect of commas in arguments of `IS_PROBE`
 
 Although `IS_PROBE(xxx)` is intended in [[1]] and [[2]] to expand to `0` (see [Argument expansion preserves the number of arguments](#argument-expansion-preserves-the-number-of-arguments), this will not be the case if `xxx` expands to more than one argument with the second one not being `0`, as in
-
 ```
 #define xxx a, b, c
 IS_PROBE(xxx) // produces b
 ```
 
 
-## References
+# References #
+
 [1]: http://jhnet.co.uk/articles/cpp_magic
 [2]: https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
 [3]: https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F
