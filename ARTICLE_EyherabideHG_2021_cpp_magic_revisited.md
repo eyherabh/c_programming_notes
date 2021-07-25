@@ -2,7 +2,7 @@
 
 Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by the articles [C pre-processor magic][1][[1]], [C Preprocessor tricks, tips, and idioms][2][[2]] and [Is the C preprocessor Turing complete?][3][[2]], complementing the information their provided in a concise manner. Therefore, it is recommended to either read those articles beforehand, or in conjunction with the following sections.
 
-# What makes it interesting? #
+# What makes it interesting?
 
 The content of [[1]] is similar to that of [[2]] and [[3]], except for two aspects. First, macro expansion is illustrated in detail, step by step, rendering it extremely useful for understanding or reviewing the expansion of macros with recursion. Second, both present macros for iterations but different. The former presents a `MAP` macro for mapping another macro over a list of arguments which automatically counts the number of items (i.e., the macro does not require a count parameter that could possibly differ the actual number of items). The latter, two macros `REPEAT` and `WHILE` for repeating a macro a fixed number of times or until a condition is met, respectively. 
 
@@ -48,40 +48,49 @@ The macros `EXPAND` and `EVAL` are defined in [[1]] and [[2]] in a way analogous
 #define EVAL(...) EVAL1(EVAL1(EVAL1(__VA_ARGS__)))
 #define EVAL1(...) __VA_ARGS__
 ```
-where, for simplicity, this definition of `EVAL` only expands thrice. Note that `EXPAND` and `EVAL1` are identical. Can we redefine `EVAL` as follows
+For simplicity, the definition of `EVAL` above only expands thrice. The fact that `EXPAND` and `EVAL1` are identical leaves one wondering: Can `EVAL` be defined as follows
 ```
 #define EVAL_EXPAND(...) EXPAND(EXPAND(EXPAND(__VA_ARGS__)))
 ```
-and remove the apparent redundancy. Unfortunately, that is not always possible, and depend on how `EXPAND` is used in the argument of `EVAL`.
+to remove the apparent redundancy? Unfortunately, that is not always possible, and depend on how `EXPAND` is used in the argument of `EVAL`.
 
-To illustrate, consider the following calls
+To illustrate, note how the following calls expand
+
++ `EVAL       (EXPAND(X))                    // Expands to X`
++ `EVAL_EXPAND(EXPAND(X))                    // Expands to X`
++ `EVAL       (EXPAND EMPTY()(X))            // Expands to X`
++ `EVAL_EXPAND(EXPAND EMPTY()(X))            // Expands to X`
++ `EVAL       (EXPAND EMPTY EMPTY()()(X))    // Expands to X`
++ `EVAL_EXPAND(EXPAND EMPTY EMPTY()()(X))    // Expands to EXPAND(X)`
+
+All calls but the sixth expand to `X`. To investigate why, recall that
+
++ Arguments are expanded after identified before processing the macro body and in isolation (6.10.3.1 in [[4]]).
++ After argument substitution in the macro body, the result is rescanned (6.10.43.4 in [[4]] and sections 3.3 and 3.10.6 in [[5]]).
++ During the rescan, if the name of the macro being replaced if found, it is marked so that this and any other occurrence are not replaced (6.10.3.4 in [[4]]).
++ Macros that did not expand during the argument expansion will not expand during the rescan (section 3.10.6 in [[5]]).
+
+Based on this rules, the expansions of the first two calls are straightforward since their arguments expand to `X`, which is not a macro name. However, the other expansions are not so clear for at least three reasons. First, both `EVAL` and `EVAL_EXPAND` are similar, in the sense that both consist of nested calls to macros that rescan their arguments. However, this similarity is insufficient to prevent dissimilar expansions (compare the fifth and sixth expansions). Second, `EVAL_EXPAND` contains sufficient nested calls for overcoming any delay introduced by the calls to `EMPTY` (see [[1]]). Notwithstanding, the sixth call leaves `EXPAND` unreplaced. Third, should the culprit be the fact that `EXPAND` appears both in the argument and body of `EVAL_EXPAND`, then why the fourth and sixth calls yield different results.
+
+
+The fourth call starts by identifying the argument and expanding it. The argument is expanded by replacing `EMPTY()`, thereby yielding `EXPAND(X)`. Neither the third nor the fourth rules apply to `EXPAND` during the rescan after arguement replacement. The third rule, because the macro being expanded at this point is `EVAL_EXPAND`. The fourth rule, because due to `EMPTY()` being placed between `EXPAND` and `X`, the argument expansion did not treat `EXPAND` as a macro (see [[1]] for details). When the expanded argument is replaced, the macro body becomes
 ```
-EVAL       (EXPAND(X))                 // Expands to X
-EVAL_EXPAND(EXPAND(X))                 // Expands to X
-EVAL       (EXPAND EMPTY()(X))         // Expands to X
-EVAL_EXPAND(EXPAND EMPTY()(X))         // Expands to X
-EVAL       (EXPAND EMPTY EMPTY()()(X)) // Expands to X
-EVAL_EXPAND(EXPAND EMPTY EMPTY()()(X)) // Expands to EXPAND(X)
+EXPAND(EXPAND(EXPAND(EXPAND(X))))
 ```
-The first five calls all expand to `X` as expected, but the last one does not. To understand why, consider the substitution sequence of the last call reproduced below
+and reparsed as a nested call that ultimately expands to `X` (see section 3.10.6 if [[5]]).
+
+The sixth call also starts by idenfitying the argument and expanding it. However, the argument expands to `EXPAND EMPTY() (X)`. Even so, neither the third nor the fourth rules apply to `EXPAND` and `EMPTY` during the rescan, at least not yet. In the case of `EXPAND`, because is not considered a macro occurrence for reasons analogous to that in the fourth call. In the case of `EMPTY`, because it was expanded during the argument prescan. When the expanded argument is replaced, the macro body becomes
 ```
-EVAL_EXPAND(EXPAND EMPTY EMPTY()()(X))
+EXPAND(EXPAND(EXPAND(EXPAND EMPTY()(X))))
 ```
-Based on sections 3.3 and 3.10.6 of [[5]], the argument of `EVAL` is fully expanded to
-```
-EXPAND EMPTY()(1)
-```
-and then substituted into the body of `EVAL`
-```
-EXPAND(EXPAND(EXPAND EMPTY()(1)))
-```
-Scanning starts again from the beginning, expanding first the argument of the nested `EXPAND` calls to
+The rescan starts as before, by first expanding the argument to the nested calls of `EXPAND`. The argument `EXPAND EMPTY() (x)` expands to `EXPAND(X)` which is then replaced into the body of the innermost call of `EXPAND` which becomes
 ```
 EXPAND(X)
 ```
-and then substituted and expanded as nested macros (see section 3.10.6 in [[5]]). However, there is a twist. 
+However, recall that this time it is innermost call to `EXPAND` that is being rescanned which after argument replacement contains a call to itself. By virtue of the third rule, the rescan does nothing. The same applies to the remaining nested calls, thereby explaining why the sixth call expands to `EXPAND(X)` instead of `X`.
 
-According to [[1]], the macro preprocessor should have not considered `EXPAND` as a macro because of the presence of `EMPTY()`. This is the case when it comes to the substitutions, but apparently not the case when it comes to painting macros for stopping subsequence expansion. Specifically, macro preprocessor acts as if regarding it as a self-referential macro that did not expand in the first scan (see section 3.10.6 of [[5]]). Whether this is the case remains to be seen, but for the time being, it is clear that the `EVAL` macro cannot be based on a macro used in the one being expanded by `EVAL`.
+
+In conclusion, `EVAL` and `EVAL_EXPAND` differ in a crucial aspect: the latter is based on `EXPAND` which is also used in the arguement. That is sufficient to ensure that any delayed expansion of `EXPAND` will prevent its expansion altogether by virtue of the third rule. This observation explain the differences between all calls, and clarifies that the macro `EVAL1` is not redundant.
 
 
 ### The `REPEAT` macro
@@ -98,7 +107,7 @@ In the definition of `REPEAT` given by [[2]], the call to `OBSTRUCT` surrounding
     )
 #define REPEAT_INDIRECT() REPEAT
 ```
-The other call to `OBSTRUCT` and the `REPEAT_REDIRECT` macro cannot be further simplify without running into troubles analogous to those described in the previous section.
+The other call to `OBSTRUCT` and the `REPEAT_REDIRECT` macro cannot be further simplify without running into troubles analogous to those described in the previous section (see [[2]] for the definitions of the related macros).
 
 ### The `MAP` macro
 
@@ -108,7 +117,7 @@ Under construction ...
 
 ### Is it C-compliant?
 
-Not entirely, contrary to what the article states. The section 6.10.3-12 of the [C99 standard][4] requires that the ellipsis (`...`) matches at least one argument of the variadic-macro call (also for C11 and C18). However, this is not fulfileed for the variadic macro `HAS_ARGS`and `SECOND`. The former is defined as `#define HAS_ARGS(...)` but intended to handle calls with no arguments (within `MAP`), thereby in contradiction with C99. The latter is defined as `#define SECOND(x, y, ...)` but intended to handle calls with only two arguments ( within `IS_PROBE`), thereby resulting in a situation analogous to that of `HAS_ARGS` (i.e. the `...` is associated with no argument). In both cases, the GNU CPP 9.3.0 emits the following warning:
+Not entirely, contrary to what the article states. The section 6.10.3-12 of the [C99 standard][4] (and later, i.e. C11 and C18) requires that the ellipsis (`...`) matches at least one argument of the variadic-macro call (see 6.10.3-4 of [[4]]). However, this is not fulfileed for the variadic macro `HAS_ARGS`and `SECOND`. The former is defined as `#define HAS_ARGS(...)` but intended to handle calls with no arguments (within `MAP`), thereby in contradiction with C99. The latter is defined as `#define SECOND(x, y, ...)` but intended to handle calls with only two arguments ( within `IS_PROBE`), thereby resulting in a situation analogous to that of `HAS_ARGS` (i.e. the `...` is associated with no argument). In both cases, the GNU CPP 9.3.0 emits the following warning:
 
 ```
 warning: ISO C99 requires at least one argument for the "..." in a variadic macro
@@ -191,7 +200,7 @@ To conclude, the number of arguments before and after the expansion of the macro
 
 ### Required number of arguments for `FIRST` and `SECOND`
 
-For GNP cpp to work, `FIRST` and `SECOND` require at least one and two arguments, respectively, but for c99 compliance, they require one more. This can be reduced by defining
+For GNP CPP to work, `FIRST` and `SECOND` require at least one and two arguments, respectively, but for c99 compliance (and later), they require one more. The required number of arguments can be reduced by defining
 
 ```
 #define _FIRST(a, ...) a
