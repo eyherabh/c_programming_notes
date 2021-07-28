@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: cayman
 ---
 
 # C pre-processor magic, revisited (W.I.P.)
