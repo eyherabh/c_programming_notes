@@ -23,6 +23,7 @@ description: >- # this means to ignore newlines until "baseurl:"
     Exploring features, pitfalls and limitations of the C preprocessor and various interesting macros
 baseurl: "cpp_magic_revisited" # the subpath of your site, e.g. /blog
 url: "https://eyherabh.github.io" # the base hostname & protocol for your site, e.g. http://example.com
+relative_url: "https://eyherabh.github.io/cpp_magic_revisited"
 github_username:  eyherabh
 
 # Build settings
