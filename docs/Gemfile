@@ -21,6 +21,7 @@ group :jekyll_plugins do
   gem "mercenary", "~> 0.3.3"
   gem "jekyll", "~> 3.9.0"
   gem "i18n", "~> 0.7"
+  gem 'jekyll-titles-from-headings'
 end
 
 # Windows and JRuby does not include zoneinfo files, so bundle the tzinfo-data gem

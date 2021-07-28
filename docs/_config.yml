@@ -18,19 +18,23 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: C preprocessor magic revisited
-email: hugogabriel.eyherabide@gmail.com
+title: "C preprocessor magic, revisited"
 description: >- # this means to ignore newlines until "baseurl:"
-    "Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros previously instroduced by the articles entitled 'C pre-processor magic', 'Preprocessor tricks, tips, and idioms' and 'Is the C preprocessor Turing complete?', complementing the information there provided."
+     "Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros previously instroduced by the articles entitled 'C pre-processor magic', 'Preprocessor tricks, tips, and idioms' and 'Is the C preprocessor Turing complete?', complementing the information there provided."
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
-twitter_username: jekyllrb
-github_username:  jekyll
+github_username:  eyherabh
 
 # Build settings
 theme: minima
 plugins:
-  - jekyll-feed
+   - jekyll-feed
+   - jekyll-titles-from-headings
+
+titles_from_headings:
+  enabled:     true
+  strip_title: true
+  collections: true 
 
 # Exclude from processing.
 # The following items will not be processed, by default.

@@ -274,6 +274,7 @@ DEPENDENCIES
   jekyll (~> 3.9.0)
   jekyll-feed (~> 0.12)
   jekyll-sass-converter (~> 1.5.2)
+  jekyll-titles-from-headings
   mercenary (~> 0.3.3)
   minima (~> 2.5)
   terminal-table (~> 1.4)
