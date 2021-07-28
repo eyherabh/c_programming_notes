@@ -288,7 +288,7 @@ IS_PROBE(xxx) // produces b
 ```
 
 
-# References #
+# References
 
 [1]: http://jhnet.co.uk/articles/cpp_magic
 [2]: https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
@@ -309,3 +309,10 @@ IS_PROBE(xxx) // produces b
 7. [JPL Institutional Coding Standard for the C Programming Language](https://yurichev.com/mirrors/C/JPL_Coding_Standard_C.pdf)
 8. [Purdum J, Beginning C for Arduino, Second Edition: Learn C Programming for the Arduino,2015](https://www.amazon.com/Beginning-Arduino-Second-Learn-Programming/dp/1484209419)
 9. [Response of non-a-user to "Comma in C/C++ macro"](https://stackoverflow.com/questions/13842468/comma-in-c-c-macro)
+
+# License
+
+Copyright 2021 Hugo Gabriel Eyherabide
+
+The content of this page is licensed under the [GNU GPL v3.0](https://www.gnu.org/licenses/).
+
