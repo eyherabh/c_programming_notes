@@ -20,15 +20,18 @@
 
 title: "C preprocessor magic, revisited"
 description: >- # this means to ignore newlines until "baseurl:"
-     "Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros previously instroduced by the articles entitled 'C pre-processor magic', 'Preprocessor tricks, tips, and idioms' and 'Is the C preprocessor Turing complete?', complementing the information there provided."
+    Exploring features, pitfalls and limitations of the C preprocessor and various interesting macros
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 github_username:  eyherabh
 
 # Build settings
-theme: minima
+remote_theme: pages-themes/cayman@v0.2.0
 plugins:
-   - jekyll-feed
+- jekyll-remote-theme # add this line to the plugins list if you already have one
+
+plugins:
+#   - jekyll-feed
    - jekyll-titles-from-headings
 
 titles_from_headings:
