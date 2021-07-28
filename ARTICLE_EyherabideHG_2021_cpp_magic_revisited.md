@@ -1,6 +1,6 @@
 # C pre-processor magic, revisited (W.I.P.)
 
-Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by the articles [C pre-processor magic][1][[1]], [C Preprocessor tricks, tips, and idioms][2][[2]] and [Is the C preprocessor Turing complete?][3][[2]], complementing the information their provided in a concise manner. Therefore, it is recommended to either read those articles beforehand, or in conjunction with the following sections.
+Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by the articles [C pre-processor magic][1][[1]], [C Preprocessor tricks, tips, and idioms][2][[2]] and [Is the C preprocessor Turing complete?][3][[2]], complementing the information there provided in a concise manner. Therefore, it is recommended to either read those articles beforehand, or in conjunction with the following sections.
 
 # What makes it interesting?
 
