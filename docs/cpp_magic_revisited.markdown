@@ -6,9 +6,12 @@ layout: default
 
 Macros are almost always discouraged, but they are far from rare in production code. Therefore, it is of interest to explore their pitfalls, limitations, and compliance with the C-standard and others. In this article, I will analyse the macros introduced by the articles [C pre-processor magic][1][[1]], [C Preprocessor tricks, tips, and idioms][2][[2]] and [Is the C preprocessor Turing complete?][3][[3]], complementing the information there provided in a concise manner. Therefore, it is recommended to either read those articles beforehand, or in conjunction with the following sections.
 
-# What makes it interesting?
+# Overview
 
-The content of [[1]] is similar to that of [[2]] and [[3]], except for two aspects. First, macro expansion is illustrated in detail, step by step, rendering it extremely useful for understanding or reviewing the expansion of macros with recursion. Second, both present macros for iterations but different. The former presents a `MAP` macro for mapping another macro over a list of arguments which automatically counts the number of items (i.e., the macro does not require a count parameter that could possibly differ the actual number of items). The latter, two macros `REPEAT` and `WHILE` for repeating a macro a fixed number of times or until a condition is met, respectively. 
+The content of [[1]] is similar to that of [[2]] and [[3]], except for two aspects. First, macro expansion is illustrated in detail, step by step, rendering it extremely useful for understanding or reviewing the expansion of macros with recursion. Second, both present macros for iterations but different. The former presents a `MAP` macro for mapping a function or function-like macro over a list of arguments which automatically counts the number of items (i.e., the macro does not require a count parameter that could possibly differ the actual number of items). The latter, the two macros `REPEAT` and `WHILE` for repeating a macro a fixed number of times or until a condition is met, respectively. 
+
+
+# Features
 
 ## CPP currying ##
 
@@ -44,7 +47,7 @@ IF     (1)(FIRST, SECOND)(1, 2) // Expands to 1
 The extra expansion can be forced through either the `EVAL` macro or the `EXPAND` macro of [[1]] or [[2]].
 
 
-## Avoid `EXPAND` within the `EVAL` macro ##
+## Avoid `EXPAND` within `EVAL`
 
 The macros `EXPAND` and `EVAL` are defined in [[1]] and [[2]] in a way analogously to the following
 ```
@@ -281,7 +284,7 @@ In the second line, the space added between the expansion of `_END_OF_ARGUMENTS(
 
 ### The effect of commas in arguments of `IS_PROBE`
 
-Although `IS_PROBE(xxx)` is intended in [[1]] and [[2]] to expand to `0` (see [Argument expansion preserves the number of arguments](#argument-expansion-preserves-the-number-of-arguments), this will not be the case if `xxx` expands to more than one argument with the second one not being `0`, as in
+In [[1]] and [[2]], `IS_PROBE(X)` is intended to expand to `0` unless `X` expands to `PROBE()` (see [Argument expansion preserves the number of arguments](#argument-expansion-preserves-the-number-of-arguments) above). However, this will not be the case if `X` expands to more than one argument and the second one not being `0`. For example
 ```
 #define xxx a, b, c
 IS_PROBE(xxx) // produces b
