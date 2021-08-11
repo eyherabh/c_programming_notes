@@ -1,4 +1,4 @@
-# C generic selection
+# C generic selection (W.I.P.)
 
 The following is a short incomplete summary of the specification for generic selections:
 
