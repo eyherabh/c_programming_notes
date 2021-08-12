@@ -198,4 +198,4 @@ Compilers have perform the conversion of the controlling expression differently 
 4. [The controlling expression of _Generic](4)
 5. [Controlling expression of _Generic primary expression (DR481)](5)
 6. [Using the GNU Compiler Collection](6)
-7: [C11 - enums in Generic Selections](7)
+7. [C11 - enums in Generic Selections](7)
